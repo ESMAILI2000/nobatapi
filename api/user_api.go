@@ -1,6 +1,13 @@
 package api
 
-import "github.com/gofiber/fiber/v2"
+import (
+	"Cidna/model"
+	"Cidna/uscase"
+	viewmodel "Cidna/viewModel"
+
+	"github.com/gofiber/fiber/v2"
+	"go.mongodb.org/mongo-driver/bson/primitive"
+)
 
 type UserResponse struct {
 	Id        int    `json:"id"`
@@ -35,7 +42,7 @@ func GetUser(c *fiber.Ctx) error {
 
 func AddUser(c *fiber.Ctx) error {
 
-	user := new(UserRequest)
+	user := new(viewmodel.GetUser)
 
 	if err := c.BodyParser(user); err != nil {
 		return c.Status(400).JSON(ErrorRespons{
@@ -43,12 +50,17 @@ func AddUser(c *fiber.Ctx) error {
 			Message: "Bad Request",
 		})
 	}
-	// خروجی متن
-	// return c.SendString("hi")
 
-	return c.JSON(UserResponse{
-		Id:        1,
-		Name_user: user.Name,
-		Age:       user.Age,
+	// جایی که * استفاده کردیم برای مقدار دهی از & استفاده میکنیم
+	u := &model.User{
+		ID:      primitive.NewObjectID(),
+		Name:    user.Name,
+		AgeUser: user.AgeUser,
+	}
+	uscase.UserUse.SaveUser(u)
+
+	return c.Status(201).JSON(ErrorRespons{
+		Cod:     201,
+		Message: "success save user",
 	})
 }
