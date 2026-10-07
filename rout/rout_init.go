@@ -2,7 +2,9 @@ package rout
 
 import "github.com/gofiber/fiber/v2"
 
-func CidnaRouters(app *fiber.App) {
+func NobatRouters(app *fiber.App) {
 	UserRouters(app)
-	ProductRouters(app)
+	AuthRouters(app)
+	DashboardRouters(app)
+	DebugRouters(app)
 }

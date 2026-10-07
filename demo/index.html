@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>دمو ربات نوبت‌دهی</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: Tahoma, sans-serif; }
+        body {
+            background: #1c2733;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .phone {
+            width: 100%;
+            max-width: 420px;
+            height: 720px;
+            background: #0e1621;
+            border-radius: 20px;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+        }
+        .header {
+            background: #17212b;
+            color: white;
+            padding: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            border-bottom: 1px solid #242f3d;
+        }
+        .avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: #5288c1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 20px;
+        }
+        .header-info h4 { font-size: 15px; }
+        .header-info span { font-size: 12px; color: #7d8b99; }
+
+        .chat {
+            flex: 1;
+            overflow-y: auto;
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .msg {
+            max-width: 80%;
+            padding: 10px 14px;
+            border-radius: 15px;
+            font-size: 14px;
+            line-height: 1.8;
+            word-wrap: break-word;
+            animation: fadeIn 0.3s;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .bot {
+            background: #182533;
+            color: white;
+            align-self: flex-start;
+            border-bottom-left-radius: 5px;
+        }
+        .user {
+            background: #2b5278;
+            color: white;
+            align-self: flex-end;
+            border-bottom-right-radius: 5px;
+        }
+
+        .keyboard {
+            align-self: flex-start;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-top: 5px;
+            max-width: 90%;
+        }
+        .keyboard button {
+            background: #2b5278;
+            color: white;
+            border: none;
+            padding: 8px 14px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 13px;
+            transition: background 0.2s;
+        }
+        .keyboard button:hover:not(:disabled) {
+            background: #3d6c9c;
+        }
+        .keyboard button:disabled {
+            background: #1a2733;
+            color: #5a6875;
+            cursor: not-allowed;
+            position: relative;
+        }
+        .keyboard button:disabled::after {
+            content: " ✕";
+            font-size: 10px;
+        }
+        .keyboard button.reserved {
+            background: #2a1a1a;
+            color: #7d5555;
+            text-decoration: line-through;
+        }
+        .keyboard button.special {
+            background: #5288c1;
+        }
+        .keyboard button.special:hover {
+            background: #3d6c9c;
+        }
+        .keyboard button.back {
+            background: #3a3a3a;
+        }
+        .keyboard button.back:hover {
+            background: #4a4a4a;
+        }
+
+        .input-bar {
+            background: #17212b;
+            padding: 10px;
+            display: flex;
+            gap: 8px;
+            border-top: 1px solid #242f3d;
+        }
+        .input-bar input {
+            flex: 1;
+            background: #242f3d;
+            border: none;
+            color: white;
+            padding: 12px;
+            border-radius: 20px;
+            outline: none;
+            font-size: 14px;
+        }
+        .input-bar input:disabled {
+            opacity: 0.4;
+        }
+        .input-bar button {
+            background: #5288c1;
+            color: white;
+            border: none;
+            padding: 0 20px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        .input-bar button:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+        .start-btn {
+            background: #5288c1;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 20px;
+            cursor: pointer;
+            align-self: center;
+            margin: 10px 0;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="phone">
+        <div class="header">
+            <div class="avatar">🤖</div>
+            <div class="header-info">
+                <h4>ربات نوبت‌دهی</h4>
+                <span>آنلاین</span>
+            </div>
+        </div>
+
+        <div class="chat" id="chat">
+            <button class="start-btn" onclick="startDemo()">شروع دمو (مثل /start)</button>
+        </div>
+
+        <div class="input-bar">
+            <input type="text" id="userInput" placeholder="پیام..." disabled onkeypress="if(event.key==='Enter') sendMessage()">
+            <button onclick="sendMessage()" disabled id="sendBtn">ارسال</button>
+        </div>
+    </div>
+
+    <script>
+        let step = 0;
+        let userData = { name: '', date: '', dateLabel: '', time: '' };
+
+        const chat = document.getElementById('chat');
+        const input = document.getElementById('userInput');
+        const sendBtn = document.getElementById('sendBtn');
+
+        // تاریخ‌های سریع
+        const quickDates = [
+            { label: 'امروز', value: '1405/07/15' },
+            { label: 'فردا', value: '1405/07/16' },
+            { label: 'پس‌فردا', value: '1405/07/17' }
+        ];
+
+        // ۱۴ روز آینده برای انتخاب دستی
+        const allDates = [
+            { label: 'امروز (15 مهر)', value: '1405/07/15' },
+            { label: 'فردا (16 مهر)', value: '1405/07/16' },
+            { label: 'پس‌فردا (17 مهر)', value: '1405/07/17' },
+            { label: 'شنبه (18 مهر)', value: '1405/07/18' },
+            { label: 'یکشنبه (19 مهر)', value: '1405/07/19' },
+            { label: 'دوشنبه (20 مهر)', value: '1405/07/20' },
+            { label: 'سه‌شنبه (21 مهر)', value: '1405/07/21' },
+            { label: 'چهارشنبه (22 مهر)', value: '1405/07/22' },
+            { label: 'پنجشنبه (23 مهر)', value: '1405/07/23' },
+            { label: 'جمعه (24 مهر)', value: '1405/07/24' },
+            { label: 'شنبه (25 مهر)', value: '1405/07/25' },
+            { label: 'یکشنبه (26 مهر)', value: '1405/07/26' },
+            { label: 'دوشنبه (27 مهر)', value: '1405/07/27' },
+            { label: 'سه‌شنبه (28 مهر)', value: '1405/07/28' }
+        ];
+
+        // تایم‌ها - برای هر تاریخ یک لیست
+       function getTimesForDate(dateValue) {
+    const baseTimes = [
+        '09:00', '09:30', '10:00', '10:30',
+        '11:00', '11:30', '12:00', '12:30',
+        '14:00', '14:30', '15:00', '15:30',
+        '16:00', '16:30', '17:00', '17:30'
+    ];
+
+    // تعداد رزروها بر اساس شماره روز
+    // هر روز یک الگوی متفاوت داره
+    const reservedPatterns = {
+        '1405/07/15': [1, 4, 6, 10, 15],   // 09:30, 11:00, 12:00, 15:00, 17:30
+        '1405/07/16': [2, 5, 8, 11, 14],   // 10:00, 11:30, 14:00, 15:30, 17:00
+        '1405/07/17': [],                  // کاملاً خالی
+        '1405/07/18': [0, 3, 7, 12],       // 09:00, 10:30, 14:00, 16:00
+        '1405/07/19': [2, 6, 9, 13],       // 10:00, 12:00, 14:30, 16:30
+        '1405/07/20': [1, 5, 8, 14, 15],   // 09:30, 11:30, 14:00, 17:00, 17:30
+        '1405/07/21': [],                  // کاملاً خالی
+        '1405/07/22': [0, 4, 10, 13],      // 09:00, 11:00, 15:00, 16:30
+        '1405/07/23': [3, 7, 11],          // 10:30, 14:00, 15:30
+        '1405/07/24': [1, 2, 6, 9, 12, 15],// 09:30, 10:00, 12:00, 14:30, 16:00, 17:30
+        '1405/07/25': [],                  // کاملاً خالی
+        '1405/07/26': [4, 8, 13],          // 11:00, 14:00, 16:30
+        '1405/07/27': [2, 5, 10],          // 10:00, 11:30, 15:00
+        '1405/07/28': [0, 3, 6, 9, 12, 15] // 09:00, 10:30, 12:00, 14:30, 16:00, 17:30
+    };
+
+    const reservedIndexes = reservedPatterns[dateValue] || [];
+
+    return baseTimes.map((t, index) => ({
+        label: t,
+        reserved: reservedIndexes.includes(index)
+    }));
+}
+
+        function addMessage(text, sender) {
+            const div = document.createElement('div');
+            div.className = 'msg ' + sender;
+            div.innerText = text;
+            chat.appendChild(div);
+            chat.scrollTop = chat.scrollHeight;
+        }
+
+        function addKeyboard(buttons) {
+            const container = document.createElement('div');
+            container.className = 'keyboard';
+            buttons.forEach(btn => {
+                const b = document.createElement('button');
+                b.innerText = btn.label;
+                if (btn.className) b.classList.add(btn.className);
+                if (btn.disabled) {
+                    b.disabled = true;
+                    b.classList.add('reserved');
+                    b.title = 'رزرو شده';
+                } else {
+                    b.onclick = () => btn.onClick();
+                }
+                container.appendChild(b);
+            });
+            chat.appendChild(container);
+            chat.scrollTop = chat.scrollHeight;
+        }
+
+        function startDemo() {
+            chat.innerHTML = '';
+            step = 1;
+            userData = { name: '', date: '', dateLabel: '', time: '' };
+            input.disabled = false;
+            sendBtn.disabled = false;
+            input.focus();
+
+            addMessage("سلام! 👋\nبه ربات نوبت‌دهی خوش آمدید.\nلطفاً نام و نام خانوادگی خود را وارد کنید:", 'bot');
+        }
+
+        function sendMessage() {
+            const text = input.value.trim();
+            if (!text) return;
+
+            addMessage(text, 'user');
+            input.value = '';
+
+            setTimeout(() => handleResponse(text), 500);
+        }
+
+        function handleResponse(text) {
+            if (step === 1) {
+                userData.name = text;
+                step = 2;
+                addMessage("عالی " + text + " عزیز! 🌟\nلطفاً روز مورد نظر را انتخاب کنید:", 'bot');
+
+                input.disabled = true;
+                sendBtn.disabled = true;
+
+                showDateOptions();
+            }
+        }
+
+        function showDateOptions() {
+            const buttons = quickDates.map(d => ({
+                label: d.label,
+                onClick: () => selectDate(d)
+            }));
+
+            buttons.push({
+                label: '📅 انتخاب تاریخ دیگر',
+                className: 'special',
+                onClick: () => showAllDates()
+            });
+
+            addKeyboard(buttons);
+        }
+
+        function showAllDates() {
+            addMessage("📅 انتخاب تاریخ دیگر", 'user');
+
+            setTimeout(() => {
+                addMessage("لطفاً تاریخ مورد نظر را از لیست زیر انتخاب کنید:", 'bot');
+
+                const buttons = allDates.map(d => ({
+                    label: d.label,
+                    onClick: () => selectDate(d)
+                }));
+
+                buttons.push({
+                    label: '↩️ بازگشت',
+                    className: 'back',
+                    onClick: () => {
+                        addMessage("↩️ بازگشت", 'user');
+                        setTimeout(() => {
+                            addMessage("لطفاً روز مورد نظر را انتخاب کنید:", 'bot');
+                            showDateOptions();
+                        }, 400);
+                    }
+                });
+
+                addKeyboard(buttons);
+            }, 500);
+        }
+
+        function selectDate(dateObj) {
+            userData.date = dateObj.value;
+            userData.dateLabel = dateObj.label;
+            addMessage("📅 " + dateObj.label, 'user');
+
+            setTimeout(() => {
+                addMessage("ساعت مورد نظر را انتخاب کنید:\n(ساعت‌های خط‌خورده رزرو هستند)", 'bot');
+
+                const times = getTimesForDate(dateObj.value);
+                const buttons = times.map(t => ({
+                    label: t.label,
+                    disabled: t.reserved,
+                    onClick: () => selectTime(t)
+                }));
+
+                buttons.push({
+                    label: '↩️ بازگشت',
+                    className: 'back',
+                    onClick: () => {
+                        addMessage("↩️ بازگشت", 'user');
+                        setTimeout(() => {
+                            addMessage("لطفاً روز مورد نظر را انتخاب کنید:", 'bot');
+                            showDateOptions();
+                        }, 400);
+                    }
+                });
+
+                addKeyboard(buttons);
+            }, 500);
+        }
+
+        function selectTime(timeObj) {
+            userData.time = timeObj.label;
+            addMessage("🕐 " + timeObj.label, 'user');
+
+            setTimeout(() => {
+                addMessage(
+                    "✅ نوبت شما با موفقیت ثبت شد!\n\n" +
+                    "👤 نام: " + userData.name + "\n" +
+                    "📅 تاریخ: " + userData.dateLabel + "\n" +
+                    "🕐 ساعت: " + userData.time + "\n\n" +
+                    "منتظر تأیید نهایی از طرف ما باشید. 🙏",
+                    'bot'
+                );
+
+                setTimeout(() => {
+                    const btn = document.createElement('button');
+                    btn.className = 'start-btn';
+                    btn.innerText = 'شروع مجدد دمو';
+                    btn.onclick = startDemo;
+                    chat.appendChild(btn);
+                    chat.scrollTop = chat.scrollHeight;
+                }, 800);
+            }, 500);
+        }
+    </script>
+</body>
+</html>

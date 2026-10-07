@@ -25,6 +25,6 @@ func ConnectToMongo() (*mongo.Database, error) {
 		return nil, err
 	}
 
-	db := client.Database("CidnaDb")
+	db := client.Database("NobatDb")
 	return db, nil
 }

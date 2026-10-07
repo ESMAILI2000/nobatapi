@@ -1,31 +1,49 @@
 package main
 
 import (
-	"Cidna/database"
-	"Cidna/rout"
-	"Cidna/uscase"
+	"NobatApi/bot"
+	"NobatApi/config"
+	"NobatApi/database"
+	"NobatApi/rout"
+	"NobatApi/uscase"
 	"fmt"
+	"log"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/template/html/v2"
+	"github.com/joho/godotenv"
 )
 
 func main() {
+	godotenv.Load()
 
-	// اتصال به دیتابیس
+	cfg := config.LoadConfig()
+
 	db, err := database.ConnectToMongo()
 	if err != nil {
 		fmt.Println(err)
 	}
 
+	// تنظیم موتور قالب‌ها
+	engine := html.New("./templates", ".html")
+
 	uscase.UscaseInit(db)
 
-	app := fiber.New()
+	// ساخت سرویس ربات
+	botService := bot.NewBotService(cfg)
 
-	rout.CidnaRouters(app)
+	// اجرای ربات در گوروتین جداگانه
+	go botService.Start()
 
-	// app.Get("/:name", api.GetUser)
-	// app.Post("/user", api.AddUser)
+	app := fiber.New(fiber.Config{
+		Views: engine,
+	})
 
-	app.Listen(":8081")
+	// مسیرهای ایستا
+	app.Static("/static", "./static")
 
+	// ثبت همه روترها
+	rout.NobatRouters(app)
+
+	log.Fatal(app.Listen(":3000"))
 }
